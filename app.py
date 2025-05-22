@@ -29,12 +29,16 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Load the data
-applications_df = pd.read_excel('sample_datasets.xlsx', sheet_name='applications')
-#customers_df = pd.read_excel('sample_datasets.xlsx', sheet_name='customers')
-#stores_df = pd.read_excel('sample_datasets.xlsx', sheet_name='stores')
-marketing_df = pd.read_excel('sample_datasets.xlsx', sheet_name='marketing')
+# Load and cache the data
+@st.cache_data
+def load_data():
+    applications_df = pd.read_excel('sample_datasets.xlsx', sheet_name='applications')
+    #customers_df = pd.read_excel('sample_datasets.xlsx', sheet_name='customers')
+    #stores_df = pd.read_excel('sample_datasets.xlsx', sheet_name='stores')
+    marketing_df = pd.read_excel('sample_datasets.xlsx', sheet_name='marketing')
+    return applications_df, marketing_df
 
+applications_df, marketing_df = load_data()
 
 
 
@@ -47,19 +51,19 @@ if view == "Tasks 1-3":
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.write(f"Total applications: {applications_count:,}")
+        st.metric("Total applications", f"{applications_count:,}")
 
     # Calculate the number of approved applications
     approved_applications_df = applications_df[applications_df['approved'] == True]
     approved_count = len(approved_applications_df)
     with col2:
-        st.write(f"Approved applications: {approved_count:,}")
+        st.metric("Approved applications", f"{approved_count:,}")
 
     # Calculate the number of used applications
     used_applications_df = applications_df[applications_df['dollars_used'] > 0]
     used_count = len(used_applications_df)
     with col3:
-        st.write(f"Used applications: {used_count:,}")
+        st.metric("Used applications", f"{used_count:,}")
 
     # Visulaize the trend over the submission date
     applications_df['submit_date'] = pd.to_datetime(applications_df['submit_date'])
@@ -83,6 +87,7 @@ if view == "Tasks 1-3":
         title='Number of Applications Over Time',
         labels={'submit_month': 'Submission Month', 'num_applications': 'Number of Applications'},
     )
+    fig_applications.update_layout(hovermode='x unified')
     st.write(fig_applications)
 
     fig_approved = px.line(
@@ -93,6 +98,7 @@ if view == "Tasks 1-3":
         labels={'submit_month': 'Submission Month', 'num_approved': 'Number of Approved Applications'},
     )
     fig_approved.update_traces(line_color='lightgreen')
+    fig_approved.update_layout(hovermode='x unified')
     st.write(fig_approved)
 
     fig_used = px.line(
@@ -102,6 +108,7 @@ if view == "Tasks 1-3":
         title='Number of Used Applications Over Time',
         labels={'submit_month': 'Submission Month', 'num_used': 'Number of Used Applications'},
     )
+    fig_used.update_layout(hovermode='x unified')
     fig_used.update_traces(line_color='blue')
     st.write(fig_used)
 
@@ -116,13 +123,13 @@ if view == "Tasks 1-3":
     avg_approved = applications_df['approved_amount'].mean()
     avg_approved_per_month = applications_df.groupby('submit_month')['approved_amount'].mean().reset_index(name='avg_approved_amount')
     with col1:
-        st.write(f"Average approved amount: ${avg_approved:,.2f}")
+        st.metric("Average approved amount", f"${avg_approved:,.2f}")
 
     # Calculate the average of the used amount and average per month (excluding None or blank)
     avg_used = applications_df['dollars_used'].mean()
     avg_used_per_month = applications_df.groupby('submit_month')['dollars_used'].mean().reset_index(name='avg_used_amount')
     with col2:
-        st.write(f"Average used amount: ${avg_used:,.2f}")
+        st.metric("Average used amount", f"${avg_used:,.2f}")
 
     # Visualize the trend over the submission date
 
@@ -136,6 +143,7 @@ if view == "Tasks 1-3":
     )
     fig_avg_approved.update_yaxes(tickprefix="$", tickformat=",")
     fig_avg_approved.update_traces(line_color='teal')
+    fig_avg_approved.update_layout(hovermode='x unified')
     st.write(fig_avg_approved)
 
     # Plot average used amount per month
@@ -148,6 +156,7 @@ if view == "Tasks 1-3":
     )
     fig_avg_used.update_yaxes(tickprefix="$", tickformat=",")
     fig_avg_used.update_traces(line_color='lightpink')
+    fig_avg_used.update_layout(hovermode='x unified')
     st.write(fig_avg_used)
 
 
@@ -269,8 +278,12 @@ if view == "Task 4":
     marketing_df = marketing_df.iloc[1:].reset_index(drop=True)
 
     # Create a view with a graph to compare the used dollars amount by marketing name, and color by spend amount
+    
+    # Sort the marketing_df by 'spend' in descending order before plotting
+    marketing_df_sorted = marketing_df.sort_values(by='spend', ascending=False)
+
     fig_marketing = px.bar(
-        marketing_df,
+        marketing_df_sorted,
         x='name',
         y='spend',
         color='spend',
@@ -285,8 +298,7 @@ if view == "Task 4":
 
 # Task 5 ------------------------------------------------------------------------------------------------------------
 if view == "Task 5":
-    st.header("Task 5")
-    st.subheader("Outliers based on Store metrics")
+    st.header("Task 5 - Outliers based on Store metrics")
 
     # Recreate the store summary dataframe for Task 5
     approved_applications_df = applications_df[applications_df['approved'] == True]
@@ -367,9 +379,10 @@ if view == "Task 5":
     ]
 
 
-    st.subheader("Outliers in Total Approved Amount")
+    st.header("Outliers in Total Approved Amount")
     for store in outliers['store']:
-        st.write(f"Store {store} has an outlier in total approved amount: {outliers[outliers['store'] == store]['total_approved_amount'].values[0]}")
+        st.subheader(f"Store #{store}")
+        st.metric(f"Store {store} has an outliter in total approved amount", f"{outliers[outliers['store'] == store]['total_approved_amount'].values[0]}")
 
 
     # Let's see if there are any outliers in the percent of funds used
@@ -394,9 +407,10 @@ if view == "Task 5":
     ]
 
 
-    st.subheader("Outliers in Percent of Funds Used")
+    st.header("Outliers in Percent of Funds Used")
     for store in outliers['store']:
-        st.write(f"Store {store} has an outlier in percent of funds used: {outliers[outliers['store'] == store]['percent_of_funds_used'].values[0]}")
+        st.subheader(f"Store #{store}")
+        st.metric(f"Store {store} has an outlier in percent of funds used", f"{outliers[outliers['store'] == store]['percent_of_funds_used'].values[0]}")
 
 
 
