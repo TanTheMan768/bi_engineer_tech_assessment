@@ -41,8 +41,17 @@ marketing_df.to_sql('marketing', conn, index=False, if_exists='replace')
 # Prompt 1: The marketing organization is curious to see what the cash used amount is for each campaign.
 
  
+# Cash used amount per campaign
 
 query = """
+SELECT marketing.name AS campaign_name,
+        SUM(applications.dollars_used) AS cash_used_amount
+FROM applications
+JOIN customers ON applications.customer_id = customers.customer_id
+JOIN marketing ON customers.campaign = marketing.id
+GROUP BY marketing.name
+ORDER BY cash_used_amount DESC;
+
 
 -- WRITE SQL CODE HERE USING TABLE NAMES (customers, applications, stores, marketing)
 
