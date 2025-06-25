@@ -33,12 +33,12 @@ st.markdown(
 @st.cache_data
 def load_data():
     applications_df = pd.read_excel('sample_datasets.xlsx', sheet_name='applications')
-    #customers_df = pd.read_excel('sample_datasets.xlsx', sheet_name='customers')
+    customers_df = pd.read_excel('sample_datasets.xlsx', sheet_name='customers')
     #stores_df = pd.read_excel('sample_datasets.xlsx', sheet_name='stores')
     marketing_df = pd.read_excel('sample_datasets.xlsx', sheet_name='marketing')
-    return applications_df, marketing_df
+    return applications_df, marketing_df, customers_df
 
-applications_df, marketing_df = load_data()
+applications_df, marketing_df, customers_df = load_data()
 
 
 
@@ -274,26 +274,47 @@ if view == "Tasks 1-3":
 if view == "Task 4":
     st.header("Task 4")
 
-    # Clean the marketing dataframe
-    marketing_df = marketing_df.iloc[1:].reset_index(drop=True)
+    # # Clean the marketing dataframe
+    # marketing_df = marketing_df.iloc[1:].reset_index(drop=True)
 
-    # Create a view with a graph to compare the used dollars amount by marketing name, and color by spend amount
+    # # Create a view with a graph to compare the used dollars amount by marketing name, and color by spend amount
     
-    # Sort the marketing_df by 'spend' in descending order before plotting
-    marketing_df_sorted = marketing_df.sort_values(by='spend', ascending=False)
+    # # Sort the marketing_df by 'spend' in descending order before plotting
+    # marketing_df_sorted = marketing_df.sort_values(by='spend', ascending=False)
 
-    fig_marketing = px.bar(
-        marketing_df_sorted,
+    # fig_marketing = px.bar(
+    #     marketing_df_sorted,
+    #     x='name',
+    #     y='spend',
+    #     color='spend',
+    #     title='Used Dollars Amount by Marketing Name',
+    #     labels={'name': 'Marketing Name', 'spend': 'Used Dollars Amount ($)'},
+    # )
+    # fig_marketing.update_yaxes(tickprefix="$")
+    # st.write(fig_marketing)
+    
+    # Join applications with customers
+    applications_customers_df = applications_df.merge(customers_df, on='customer_id', how='left')
+
+    # Now join with marketing
+    app_cust_mark_df = applications_customers_df.merge(marketing_df, left_on='campaign', right_on='id', how='left')
+
+    summary = (
+        app_cust_mark_df
+        .groupby(['name', 'spend'], as_index=False)
+        .agg({'dollars_used': 'sum'})
+    )
+
+    fig = px.bar(
+        summary,
         x='name',
-        y='spend',
+        y='dollars_used',
         color='spend',
         title='Used Dollars Amount by Marketing Name',
-        labels={'name': 'Marketing Name', 'spend': 'Used Dollars Amount ($)'},
+        labels={'name': 'Marketing Name', 'dollars_used': 'Used Dollars Amount ($)'},
     )
-    fig_marketing.update_yaxes(tickprefix="$")
-    st.write(fig_marketing)
 
-
+    st.write(fig)
 
 
 # Task 5 ------------------------------------------------------------------------------------------------------------
